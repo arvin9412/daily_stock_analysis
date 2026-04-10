@@ -60,8 +60,12 @@ if [ "$DEPLOY_MODE" = "docker" ]; then
         exit 1
     fi
     
-    # 检查 Docker Compose
-    if ! docker compose version > /dev/null 2>&1; then
+    # 检查 Docker Compose（兼容独立版和插件版）
+    if command -v docker-compose > /dev/null 2>&1; then
+        COMPOSE_CMD="docker-compose"
+    elif docker compose version > /dev/null 2>&1; then
+        COMPOSE_CMD="docker compose"
+    else
         echo -e "${RED}❌ Docker Compose 未安装${NC}"
         exit 1
     fi
@@ -90,18 +94,18 @@ if [ "$DEPLOY_MODE" = "docker" ]; then
     
     # 构建镜像
     echo -e "${YELLOW}🔨 构建 Docker 镜像...${NC}"
-    docker compose -f docker/docker-compose.yml build
+    $COMPOSE_CMD -f docker/docker-compose.yml build
     
     # 启动服务
     echo -e "${YELLOW}🚀 启动服务...${NC}"
-    docker compose -f docker/docker-compose.yml up -d server
+    $COMPOSE_CMD -f docker/docker-compose.yml up -d server
     
     # 等待启动
     sleep 3
     
     # 检查状态
     echo -e "${BLUE}📊 服务状态${NC}"
-    docker compose ps
+    $COMPOSE_CMD ps
     
     echo ""
     echo -e "${GREEN}========================================${NC}"

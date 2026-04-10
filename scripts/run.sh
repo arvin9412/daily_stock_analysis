@@ -198,12 +198,13 @@ case "${1:---daemon}" in
     --docker)
         echo -e "${BLUE}🐳 使用 Docker 启动...${NC}"
         if [ -f "docker/docker-compose.yml" ]; then
-            # 尝试新命令 (docker compose)，失败则用旧命令 (docker-compose)
-            if command -v docker > /dev/null 2>&1; then
-                docker compose -f docker/docker-compose.yml up -d server || \
+            # 兼容 docker-compose 和 docker compose
+            if command -v docker-compose > /dev/null 2>&1; then
                 docker-compose -f docker/docker-compose.yml up -d server
+            elif docker compose version > /dev/null 2>&1; then
+                docker compose -f docker/docker-compose.yml up -d server
             else
-                echo -e "${RED}❌ Docker 未安装${NC}"
+                echo -e "${RED}❌ Docker Compose 未安装${NC}"
                 exit 1
             fi
         else
