@@ -75,7 +75,7 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <Router>
+    <Router basename="/daily">
       <AuthProvider>
         <AppContent />
       </AuthProvider>
