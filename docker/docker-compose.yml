@@ -24,10 +24,10 @@ x-common: &common
     - ../data:/app/data
     - ../logs:/app/logs
     - ../reports:/app/reports
-    - ../.env:/app/.env
     - ../strategies:/app/strategies:ro
     # 如需覆盖前端静态资源，可挂载本地 static 目录
     # - ../static:/app/static:ro
+    # 注意：.env 通过 env_file 加载，无需挂载
 
   environment:
     - TZ=Asia/Shanghai
@@ -48,9 +48,9 @@ x-common: &common
   deploy:
     resources:
       limits:
-        memory: 512M
+        memory: 1024M  # 1GB，避免 OOM
       reservations:
-        memory: 256M
+        memory: 512M
 
 services:
   # 定时任务模式

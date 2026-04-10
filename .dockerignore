@@ -28,3 +28,29 @@ test_*.py
 # 忽略文档
 *.md
 !README.md
+
+# 忽略 Git
+.git/
+.gitignore
+
+# 忽略 GitHub Actions
+.github/
+
+# 忽略 Node 模块（构建时会重新安装）
+node_modules/
+apps/*/node_modules/
+
+# 忽略日志和数据
+logs/
+data/
+reports/
+*.log
+
+# 忽略本地脚本
+scripts/deploy.sh
+scripts/run.sh
+scripts/stop.sh
+
+# 忽略系统文件
+.DS_Store
+Thumbs.db

@@ -67,10 +67,9 @@ EXPOSE 8000
 # 数据卷（持久化数据）
 VOLUME ["/app/data", "/app/logs", "/app/reports"]
 
-# 健康检查（FastAPI 模式）
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8000/api/health || curl -f http://localhost:8000/health \
-    || python -c "import sys; sys.exit(0)"
+# 健康检查（使用 Python，更可靠）
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" || exit 1
 
 # 默认命令（可被覆盖）
 CMD ["python", "main.py", "--schedule"]
