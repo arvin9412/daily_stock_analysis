@@ -73,9 +73,12 @@ const AppContent: React.FC = () => {
   );
 };
 
+const routerBasename = import.meta.env.VITE_BASE_PATH || '/';
+console.log("routerBasename",routerBasename);
+
 const App: React.FC = () => {
   return (
-    <Router basename="/daily">
+    <Router basename={routerBasename}>
       <AuthProvider>
         <AppContent />
       </AuthProvider>

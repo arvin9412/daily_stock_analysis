@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>股票 Chatbot</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --accent: #58a6ff;
+    --user-bubble: #1f6feb;
+    --bot-bubble: #21262d;
+    --green: #3fb950;
+    --red: #f85149;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .header .logo {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .header h1 { font-size: 16px; font-weight: 600; }
+  .header .subtitle { font-size: 12px; color: var(--text-dim); }
+
+  .header-right {
+    margin-left: auto;
+    display: flex; gap: 8px; align-items: center;
+  }
+
+  .ticker-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+  }
+
+  .status-dot.offline { background: var(--red); }
+
+  /* Chat Area */
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .message {
+    display: flex;
+    gap: 10px;
+    max-width: 80%;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .message.user { align-self: flex-end; flex-direction: row-reverse; }
+  .message.bot { align-self: flex-start; }
+
+  .avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+
+  .message.user .avatar { background: var(--user-bubble); }
+  .message.bot .avatar { background: var(--surface2); border: 1px solid var(--border); }
+
+  .bubble {
+    padding: 12px 16px;
+    border-radius: 16px;
+    line-height: 1.6;
+    font-size: 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .message.user .bubble {
+    background: var(--user-bubble);
+    border-bottom-right-radius: 4px;
+  }
+
+  .message.bot .bubble {
+    background: var(--bot-bubble);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
+
+  .typing-indicator {
+    display: inline-flex; gap: 4px; padding: 8px 0;
+  }
+
+  .typing-indicator span {
+    width: 6px; height: 6px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Prepared Questions */
+  .questions-bar {
+    padding: 8px 20px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+
+  .question-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+
+  .question-chip:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  /* Input Area */
+  .input-area {
+    padding: 12px 20px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .input-area input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 16px;
+    border-radius: 24px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .input-area input:focus {
+    border-color: var(--accent);
+  }
+
+  .input-area input::placeholder { color: var(--text-dim); }
+
+  .send-btn {
+    background: var(--accent);
+    border: none;
+    color: #fff;
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.2s;
+  }
+
+  .send-btn:hover { opacity: 0.85; }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Profile Panel */
+  .profile-panel {
+    position: fixed;
+    right: 0; top: 0; bottom: 0;
+    width: 320px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    padding: 20px;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+    z-index: 100;
+  }
+
+  .profile-panel.open { transform: translateX(0); }
+
+  .profile-panel h2 { font-size: 16px; margin-bottom: 16px; }
+
+  .profile-field {
+    margin-bottom: 12px;
+  }
+
+  .profile-field label {
+    font-size: 12px;
+    color: var(--text-dim);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .profile-field .value {
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  .profile-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .profile-toggle:hover { color: var(--text); border-color: var(--text-dim); }
+
+  /* History Panel */
+  .history-panel {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: 320px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+    z-index: 100;
+  }
+
+  .history-panel.open { transform: translateX(0); }
+
+  .history-panel h2 { font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+
+  .history-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .history-toggle:hover { color: var(--text); border-color: var(--text-dim); }
+
+  .clear-history-btn {
+    background: var(--red);
+    border: none;
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-bottom: 16px;
+    width: 100%;
+    transition: opacity 0.2s;
+  }
+
+  .clear-history-btn:hover { opacity: 0.85; }
+
+  .history-item {
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .history-item.user { border-left: 3px solid var(--user-bubble); }
+  .history-item.bot { border-left: 3px solid var(--green); }
+
+  .history-item .role {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+
+  .history-item .content {
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .history-item .content.expanded { max-height: none; }
+
+  .history-empty {
+    color: var(--text-dim);
+    font-size: 13px;
+    text-align: center;
+    padding: 40px 0;
+  }
+
+  /* Intent Debug Info */
+  .intent-debug {
+    margin-top: 6px;
+    padding: 4px 10px;
+    background: rgba(88, 166, 255, 0.08);
+    border: 1px solid rgba(88, 166, 255, 0.2);
+    border-radius: 8px;
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .intent-tag {
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+  }
+
+  .intent-tag.topic { background: rgba(63, 185, 80, 0.15); border-color: rgba(63, 185, 80, 0.3); color: var(--green); }
+  .intent-tag.granularity { background: rgba(210, 153, 34, 0.15); border-color: rgba(210, 153, 34, 0.3); color: #d29922; }
+  .intent-tag.info-need { background: rgba(248, 81, 73, 0.15); border-color: rgba(248, 81, 73, 0.3); color: var(--red); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">📈</div>
+  <div>
+    <h1>股票 Chatbot</h1>
+    <div class="subtitle">AI 投资助手 · 专业且口语化</div>
+  </div>
+  <div class="header-right">
+    <div class="status-dot" id="statusDot"></div>
+    <button class="history-toggle" id="historyToggle">历史</button>
+    <button class="profile-toggle" id="profileToggle">画像</button>
+  </div>
+</div>
+
+<!-- Chat Area -->
+<div class="chat-area" id="chatArea">
+  <div class="message bot">
+    <div class="avatar">🤖</div>
+    <div class="bubble">你好！我是你的股票投资助手。<br><br>最近市场波动不小，你想先聊聊大盘走势，还是看看具体的个股（比如 AMZN、TSLA）？</div>
+  </div>
+</div>
+
+<!-- Prepared Questions -->
+<div class="questions-bar" id="questionsBar">
+  <div class="question-chip" data-q="大盘分析">大盘分析</div>
+  <div class="question-chip" data-q="个股分析">个股分析</div>
+  <div class="question-chip" data-q="随便聊聊">随便聊聊</div>
+</div>
+
+<!-- Input Area -->
+<div class="input-area">
+  <input type="text" id="messageInput" placeholder="输入你的问题..." autocomplete="off">
+  <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+</div>
+
+<!-- Profile Panel -->
+<div class="profile-panel" id="profilePanel">
+  <h2>👤 用户画像</h2>
+  <div class="profile-field">
+    <label>投资目标</label>
+    <div class="value" id="pf_goals">未知</div>
+  </div>
+  <div class="profile-field">
+    <label>投资风格</label>
+    <div class="value" id="pf_style">未知</div>
+  </div>
+  <div class="profile-field">
+    <label>投资水平</label>
+    <div class="value" id="pf_level">未知</div>
+  </div>
+  <div class="profile-field">
+    <label>资金量级</label>
+    <div class="value" id="pf_capital">未知</div>
+  </div>
+  <div class="profile-field">
+    <label>关注个股</label>
+    <div class="value" id="pf_stocks">暂无记录</div>
+  </div>
+</div>
+
+<!-- History Panel -->
+<div class="history-panel" id="historyPanel">
+  <h2>
+    📜 聊天历史
+    <button class="history-toggle" id="closeHistory">✕</button>
+  </h2>
+  <button class="clear-history-btn" id="clearHistoryBtn">🗑️ 清空聊天记录</button>
+  <div id="historyList">
+    <div class="history-empty">暂无聊天记录</div>
+  </div>
+</div>
+
+<script>
+  const API_URL = 'http://localhost:8899';
+  let sessionId = null;
+  let isLoading = false;
+
+  const chatArea = document.getElementById('chatArea');
+  const messageInput = document.getElementById('messageInput');
+  const sendBtn = document.getElementById('sendBtn');
+
+  // Update questions bar
+  function updateQuestions(questions) {
+    if (!questions) return;
+    const bar = document.getElementById('questionsBar');
+    bar.innerHTML = '';
+    questions.forEach(q => {
+      const chip = document.createElement('div');
+      chip.className = 'question-chip';
+      chip.dataset.q = q;
+      chip.textContent = q;
+      chip.addEventListener('click', () => {
+        messageInput.value = q;
+        sendMessage();
+      });
+      bar.appendChild(chip);
+    });
+  }
+
+  // Enter to send
+  messageInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // Question chips
+  document.querySelectorAll('.question-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      messageInput.value = chip.dataset.q;
+      sendMessage();
+    });
+  });
+
+  // Profile toggle
+  document.getElementById('profileToggle').addEventListener('click', () => {
+    document.getElementById('profilePanel').classList.toggle('open');
+  });
+
+  // History toggle
+  document.getElementById('historyToggle').addEventListener('click', () => {
+    document.getElementById('historyPanel').classList.toggle('open');
+    loadHistory();
+  });
+
+  document.getElementById('closeHistory').addEventListener('click', () => {
+    document.getElementById('historyPanel').classList.remove('open');
+  });
+
+  // Clear history
+  document.getElementById('clearHistoryBtn').addEventListener('click', async () => {
+    if (!sessionId) {
+      alert('当前没有会话');
+      return;
+    }
+    if (!confirm('确定要清空聊天记录吗？')) return;
+    
+    try {
+      const res = await fetch(`${API_URL}/api/sessions/${sessionId}/clear`, { method: 'POST' });
+      if (res.ok) {
+        // 清空聊天界面
+        chatArea.innerHTML = `
+          <div class="message bot">
+            <div class="avatar">🤖</div>
+            <div class="bubble">聊天记录已清空。重新开始了，想聊点什么？</div>
+          </div>`;
+        // 重置深度
+        loadHistory();
+      } else {
+        alert('清空失败');
+      }
+    } catch (err) {
+      alert(`清空失败：${err.message}`);
+    }
+  });
+
+  // Load history into panel
+  async function loadHistory() {
+    if (!sessionId) return;
+    try {
+      const res = await fetch(`${API_URL}/api/sessions/${sessionId}/history`);
+      if (!res.ok) return;
+      const history = await res.json();
+      const list = document.getElementById('historyList');
+      
+      if (!history || history.length === 0) {
+        list.innerHTML = '<div class="history-empty">暂无聊天记录</div>';
+        return;
+      }
+
+      list.innerHTML = '';
+      history.forEach((msg, idx) => {
+        const item = document.createElement('div');
+        item.className = `history-item ${msg.role === 'user' ? 'user' : 'bot'}`;
+        const roleLabel = msg.role === 'user' ? '👤 你' : '🤖 AI';
+        const content = msg.content.length > 150 ? msg.content.slice(0, 150) + '...' : msg.content;
+        item.innerHTML = `
+          <div class="role">${roleLabel}</div>
+          <div class="content" data-full="${escapeHtml(msg.content)}" title="点击展开">${escapeHtml(content)}</div>
+        `;
+        // Click to expand/collapse
+        item.querySelector('.content').addEventListener('click', function() {
+          this.classList.toggle('expanded');
+          if (this.classList.contains('expanded')) {
+            this.innerHTML = escapeHtml(msg.content);
+          } else {
+            const preview = msg.content.length > 150 ? msg.content.slice(0, 150) + '...' : msg.content;
+            this.innerHTML = escapeHtml(preview);
+          }
+        });
+        list.appendChild(item);
+      });
+    } catch (err) {
+      console.error('Failed to load history:', err);
+    }
+  }
+
+  // Typing indicator
+  function showTyping() {
+    const msg = document.createElement('div');
+    msg.className = 'message bot';
+    msg.id = 'typingMsg';
+    msg.innerHTML = `
+      <div class="avatar">🤖</div>
+      <div class="bubble">
+        <div class="typing-indicator"><span></span><span></span><span></span></div>
+      </div>`;
+    chatArea.appendChild(msg);
+    chatArea.scrollTop = chatArea.scrollHeight;
+  }
+
+  function hideTyping() {
+    const el = document.getElementById('typingMsg');
+    if (el) el.remove();
+  }
+
+  // Add message to UI
+  function addMessage(role, content, intent = null) {
+    const msg = document.createElement('div');
+    msg.className = `message ${role}`;
+    const avatar = role === 'user' ? '👤' : '🤖';
+    let intentHtml = '';
+    if (intent && role === 'bot') {
+      intentHtml = `<div class="intent-debug">
+        <span class="intent-tag topic">📊 ${intent.topic_type}</span>
+        <span class="intent-tag">💬 ${intent.matched_question}</span>
+        <span class="intent-tag granularity">📏 ${intent.granularity}</span>
+        ${intent.needs_info ? `<span class="intent-tag info-need">📝 需收集: ${intent.missing_info.join(', ')}</span>` : ''}
+      </div>`;
+    }
+    msg.innerHTML = `
+      <div class="avatar">${avatar}</div>
+      <div>
+        <div class="bubble">${escapeHtml(content)}</div>
+        ${intentHtml}
+      </div>`;
+    chatArea.appendChild(msg);
+    chatArea.scrollTop = chatArea.scrollHeight;
+    return msg;
+  }
+
+  function escapeHtml(text) {
+    return text.replace(/&/g, '&amp;')
+               .replace(/</g, '&lt;')
+               .replace(/>/g, '&gt;')
+               .replace(/\n/g, '<br>');
+  }
+
+  // Render intent debug info (collapsible, shows full JSON)
+  function renderIntent(el, intent) {
+    if (!el || !intent) return;
+    el.style.display = 'block';
+    const jsonStr = JSON.stringify(intent, null, 2);
+    el.innerHTML = `
+      <details style="width:100%; margin:0;">
+        <summary style="cursor:pointer; font-size:11px; color:var(--text-dim); padding:2px 0; user-select:none;">
+          🔍 意图识别 (debug)
+        </summary>
+        <pre style="margin:6px 0 0 0; padding:8px; background:var(--surface2); border-radius:6px; font-size:11px; line-height:1.5; overflow-x:auto; color:var(--text); white-space:pre-wrap; word-break:break-all;">${escapeHtml(jsonStr)}</pre>
+      </details>
+    `;
+  }
+
+  // Send message with SSE streaming
+  async function sendMessage() {
+    const text = messageInput.value.trim();
+    if (!text || isLoading) return;
+
+    isLoading = true;
+    sendBtn.disabled = true;
+    messageInput.value = '';
+
+    addMessage('user', text);
+    showTyping();
+
+    try {
+      const response = await fetch(`${API_URL}/api/chat/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          session_id: sessionId,
+        }),
+      });
+
+      hideTyping();
+
+      if (!response.ok) {
+        addMessage('bot', `请求失败：${response.status}`);
+        return;
+      }
+
+      // Create bot message element for streaming
+      const botMsg = document.createElement('div');
+      botMsg.className = 'message bot';
+      botMsg.innerHTML = `
+        <div class="avatar">🤖</div>
+        <div>
+          <div class="bubble" id="streamBubble"></div>
+          <div class="intent-debug" id="streamIntent" style="display:none"></div>
+        </div>`;
+      chatArea.appendChild(botMsg);
+
+      const bubble = botMsg.querySelector('#streamBubble');
+      bubble.removeAttribute('id');
+      const intentEl = botMsg.querySelector('#streamIntent');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let fullReply = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.type === 'token') {
+              fullReply += data.content;
+              bubble.innerHTML = escapeHtml(fullReply);
+              chatArea.scrollTop = chatArea.scrollHeight;
+            } else if (data.type === 'done') {
+              sessionId = data.session_id;
+              // Update questions
+              if (data.prepared_questions) {
+                updateQuestions(data.prepared_questions);
+              }
+              // Show intent debug info
+              if (data.intent) {
+                renderIntent(intentEl, data.intent);
+              }
+            } else if (data.type === 'error') {
+              bubble.innerHTML = `⚠️ ${escapeHtml(data.message)}`;
+            }
+          } catch (e) {
+            // skip parse errors
+          }
+        }
+      }
+    } catch (err) {
+      hideTyping();
+      addMessage('bot', `网络错误：${err.message}\n请确认后端服务已启动（端口 8899）`);
+    }
+
+    isLoading = false;
+    sendBtn.disabled = false;
+    messageInput.focus();
+  }
+
+  function updateQuestions(questions) {
+    const bar = document.getElementById('questionsBar');
+    bar.innerHTML = '';
+    questions.forEach(q => {
+      const chip = document.createElement('div');
+      chip.className = 'question-chip';
+      chip.dataset.q = q;
+      chip.textContent = q;
+      chip.addEventListener('click', () => {
+        messageInput.value = q;
+        sendMessage();
+      });
+      bar.appendChild(chip);
+    });
+  }
+
+  // Check server health
+  async function checkHealth() {
+    try {
+      // Use GET instead of HEAD to avoid 405 on some setups
+      const res = await fetch(`${API_URL}/`, { method: 'GET' });
+      if (res.ok) {
+        document.getElementById('statusDot').classList.remove('offline');
+      } else {
+        document.getElementById('statusDot').classList.add('offline');
+      }
+    } catch {
+      document.getElementById('statusDot').classList.add('offline');
+    }
+  }
+
+  checkHealth();
+  setInterval(checkHealth, 10000);
+</script>
+
+</body>
+</html>

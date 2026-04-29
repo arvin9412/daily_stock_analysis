@@ -9,8 +9,12 @@ const packageJson = JSON.parse(
 const buildTime = new Date().toISOString()
 
 // https://vite.dev/config/
+// 通过 VITE_BASE_PATH 环境变量控制：本地用 /，生产用 /daily/
+const base = process.env.VITE_BASE_PATH || '/';
+console.log("base",base);
+
 export default defineConfig({
-  base: '/daily/',  // Nginx 子路径部署
+  base,
   define: {
     __APP_PACKAGE_VERSION__: JSON.stringify(packageJson.version ?? '0.0.0'),
     __APP_BUILD_TIME__: JSON.stringify(buildTime),

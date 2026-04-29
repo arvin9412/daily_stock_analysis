@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 <!-- 每条独立一行追加到本段末尾，无需分类标题，合并时冲突最小 -->
 
 - [修复] `AGENT_MAX_STEPS` 在 orchestrator 多 Agent 模式下改为作为各子 Agent 的步数上限而非硬覆盖；TechnicalAgent 等高默认值 Agent 会被封顶，低默认值 Agent 保持原值，减少不必要的 LLM 调用膨胀与配额消耗。
+- [新功能] 新增 `scripts/summarize_analysis_json.py`，支持读取 `run_all_analysis_api.py` 产出的分析 JSON，按 `scripts/需求.md` 分步骤调用大模型，并把每一步的输入、提示词、输出和错误写入新的结构化 JSON 及 Markdown 总结文件。
+- [改进] `scripts/summarize_analysis_json.py` 的 Markdown 导出现在会附带“分步总结明细”，逐条列出结构化 JSON 中各步骤的总结输出；并新增 `--render-only`，可基于已有 `.structured.json` 直接重建 `.md`，无需再次调用大模型。
+- [改进] `scripts/summarize_analysis_json.py` 新增 HTML 导出（`--output-html`，默认与输出 JSON 同名 `.html`），并提供目录导航、表格/代码块样式与响应式排版；`--render-only` 模式下可直接从已有 `.structured.json` 重建 `.md/.html`。
+- [改进] `scripts/summarize_analysis_json.py` 的分步大模型输出改为统一 6 点 JSON 结构（`market/one/three/detailed/strategy_levels/reference`），并将每一步标准化结果写入 `output_json`，后续步骤输入与 Markdown/HTML 报告均基于该结构生成。
+- [改进] `scripts/summarize_analysis_json.py` 导出的 HTML 报告侧边栏新增滚动联动导航（scrollspy）：右侧滚动会自动高亮当前章节，点击左侧目录会平滑滚动并保持选中态，提升长报告阅读定位效率。
+- [改进] `scripts/summarize_analysis_json.py` 增加分步输出后验校验与自动重试：对 `one/three/detailed` 执行长度上限与“禁止逗号结尾”规则校验，不合规时携带违规项回灌提示词重试，降低输出格式漂移。
+- [修复] `scripts/run_all_analysis_api.py` 的单技能调用改为与 `test_single_skill.py` 一致的 SSE 流式接口（`/api/v1/agent/chat/stream`）并补充空结果重试，避免批量脚本在 HTTP 200 但内容为空时误记为成功。
+- [修复] `scripts/test_single_skill.py` 现在会把 `--skill` 参数显式写入请求体 `skills` 字段，避免脚本仅携带 session_id 导致后端回退到默认技能而出现“指定 bull_trend 但未生效”的结果偏差。
 - [修复] **MiniMax-M2.7 模型连接测试支持** — 修复 LLM 通道连接测试在 MiniMax-M2.7 模型下返回 "Empty response" 的问题；增加了 `max_tokens` 上限（8→256）以容纳 MiniMax 思考过程，并添加 `content_blocks` 格式解析逻辑统一处理 MiniMax 响应格式差异。
 - [修复] 移除 `HistoryItem` 与 `ReportSummary` 响应 Schema 中 `sentiment_score` 的 `ge=0/le=100` 约束（fixes #942）——历史库中存储的超范围负值或大于 100 的情绪评分不再触发 Pydantic ValidationError，历史列表与详情接口恢复正常返回。
 - [改进] Agent IntelAgent 新增公司公告搜索维度（上交所/深交所/cninfo）与主力资金流工具（get_capital_flow），修复 Agent 模式下公告和资金流数据经常缺失的问题
